@@ -8,7 +8,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
     fname TEXT NOT NULL,
-    lname TEXT
+    lname TEXT NOT NULL
 );
 
 CREATE TABLE questions (
@@ -54,9 +54,9 @@ CREATE TABLE question_likes(
 INSERT INTO
     users (fname, lname)
 VALUES
-    ('Ned', NULL),
-    ('Kush', ''),
-    ('Earl', NULL);
+    ('Ned', 'Ned'),
+    ('Kush', 'Ned'),
+    ('Earl', 'Ned');
 
 
 INSERT INTO
