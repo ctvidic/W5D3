@@ -62,4 +62,8 @@ VALUES
 INSERT INTO
     questions (title, body, author_id)
 VALUES
-    ('Ned Question', 'NED NED NED', (SELECT id FROM users WHERE fname = 'Ned'));
+    ('Ned Question', 'NED NED NED', (SELECT id FROM users WHERE fname = 'Ned')),
+    ('Kush Question', 'KUSH KUSH KUSH', (SELECT id FROM users WHERE fname = 'Kush')),
+    ('Another Kush Question', ' KUSH KUSH', (SELECT id FROM users WHERE fname = 'Kush')),
+    ('Evan  Question', 'EARL EARL EARL', (SELECT id FROM users WHERE fname = 'Earl'));
+

@@ -69,6 +69,10 @@ class User
     def authored_replies
         Reply.find_by_user_id(id)
     end
+
+    def followed_questions
+        QuestionFollow.followed_questions_for_user_id(id)
+    end
 end
 
 class Question
@@ -139,6 +143,10 @@ class Question
     def replies
         Reply.find_by_question_id(id)
     end
+
+    def followers
+        QuestionFollow.followers_for_question_id(id)
+    end
 end
 
 class QuestionFollow
@@ -161,10 +169,51 @@ class QuestionFollow
         return nil unless questionFollow.length > 0
         User.new(questionFollow.first)
     end
+
+    def self.followers_for_question_id(questions_id)
+        users = QuestionDBConnection.instance.execute(<<-SQL, questions_id)
+            SELECT
+              *
+            FROM 
+              questions JOIN users ON questions.author_id = users.id
+            WHERE
+              questions.id = ?
+        SQL
+        users.map {|user| User.new(user) }
+    end
+
+    def self.followed_questions_for_user_id(users_id)
+        questions = QuestionDBConnection.instance.execute(<<-SQL, users_id)
+            SELECT
+              *
+            FROM 
+              questions JOIN users ON questions.author_id = users.id
+            WHERE
+              users.id = ?
+        SQL
+        questions.map {|question| Question.new(question) }
+    end
+
+    def self.most_followed_questions
+        questions = QuestionDBConnection.instance.execute(<<-SQL)
+            SELECT
+              title, COUNT(title)
+            FROM 
+              questions JOIN users ON questions.author_id = users.id
+            GROUP BY title
+            ORDER BY title DESC
+            LIMIT 1
+        SQL
+    end
 end
 
 class Reply
     attr_accessor :id, :question_ref_id,:user_ref_id,:body,:parent_reply_id
+
+    def self.all
+        data = QuestionDBConnection.instance.execute("SELECT * FROM replies")
+        data.map { |datum| Reply.new(datum) }
+    end
 
     def initialize(options)
          @id = options['id']
@@ -199,7 +248,7 @@ class Reply
         replies.map { |reply| Reply.new(reply) }
     end
 
-    def find_by_question_id(question_ref_id)
+    def self.find_by_question_id(question_ref_id)
         replies = QuestionDBConnection.instance.execute(<<-SQL, question_ref_id)
             SELECT
                 *
@@ -239,9 +288,40 @@ class Reply
     end
 
     def parent_reply
+        parentReply = QuestionDBConnection.instance.execute(<<-SQL, parent_reply_id)
+        SELECT
+            *
+        FROM
+            replies
+        WHERE
+            id = ?
+        SQL
+        return nil unless parentReply.length > 0
+        Reply.new(parentReply.first)
     end
 
     def child_replies
+        parentReply = QuestionDBConnection.instance.execute(<<-SQL, id)
+        SELECT
+            *
+        FROM
+            replies
+        WHERE
+            parent_reply_id = ?
+        SQL
+        return nil unless parentReply.length > 0
+        Reply.new(parentReply.first)
+    end
+
+    def create
+      raise "#{self} already in database" if self.id
+      QuestionDBConnection.instance.execute(<<-SQL, self.question_ref_id, self.user_ref_id, self.body, self.parent_reply_id)
+      INSERT INTO
+          replies(question_ref_id, user_ref_id, body, parent_reply_id)
+      VALUES
+          (?, ?, ?, ?)
+      SQL
+        self.id = QuestionDBConnection.instance.last_insert_row_id
     end
 end
 
